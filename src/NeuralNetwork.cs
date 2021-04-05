@@ -252,6 +252,111 @@ namespace CSNN
         }
 
         /// <summary>
+        /// Save this neural network to bin/saves/{name}.
+        /// </summary>
+        /// <param name="name">{name}</param>
+        public void SaveToFile(string name)
+        {
+            // Create a writer instance.
+            BinaryWriter writer = new BinaryWriter(new FileStream("saves/" + name, FileMode.Create));
+
+            // network size " input size ' layer size " bias ' weights length ' weights " ' " ... " " ...
+
+            // Write the length of this network as an INT16
+            writer.Write((short)network.Length);
+
+            // Write the length of the input as an INT16
+            writer.Write((short)network[0].Length);
+
+            // Loop over each layer in the network.
+            for (int l = 1; l < network.Length; l++)
+            {
+                // Write the length of this layer as an INT16
+                writer.Write((short)network[l].Length);
+
+                // Loop over each neuron in this layer.
+                for (int n = 0; n < network[l].Length; n++)
+                {
+                    // Write the bias as a 16 bit decimal number.
+                    writer.Write((decimal)network[l][n].bias);
+
+                    // Write the length of the weights array as an INT16
+                    writer.Write((short)network[l][n].weights.Length);
+
+                    // Loop over each weight connected to this neuron.
+                    for (int w = 0; w < network[l][n].weights.Length; w++)
+                    {
+                        writer.Write((decimal)network[l][n].weights[w]);
+                    }
+                }
+            }
+
+            // Close the stream.
+            writer.Close();
+        }
+
+        /// <summary>
+        /// Load a neural network from the given filepath.
+        /// </summary>
+        /// <param name="path">The filepath.</param>
+        public void LoadFromFile(string path)
+        {
+            // Create a reader instance.
+            BinaryReader reader = new BinaryReader(new FileStream(path, FileMode.Open));
+
+            // Read the size of this network.
+            short network_size = reader.ReadInt16();
+
+            // Create a new network.
+            network = new Neuron[network_size][];
+
+            // Read the size of the input layer.
+            short input_size = reader.ReadInt16();
+
+            // Create the input layer.
+            network[0] = new Neuron[input_size];
+
+            for (int n = 0; n < network[0].Length; n++)
+                network[0][n] = new Neuron();
+
+            // Loop over each layer.
+            for (int l = 1; l < network_size; l++)
+            {
+                // Read the size of this layer.
+                short layer_size = reader.ReadInt16();
+
+                // Create the layer.
+                network[l] = new Neuron[layer_size];
+
+                // Loop over each neuron.
+                for (int n = 0; n < layer_size; n++)
+                {
+                    // Read the bias of this neuron.
+                    float bias = (float)reader.ReadDecimal();
+
+                    // Read the size of the weight array.
+                    short weights_length = reader.ReadInt16();
+
+                    // Create an array to hold the weights.
+                    float[] weights = new float[weights_length];
+
+                    // Loop over each weight connected to this neuron.
+                    for (int w = 0; w < weights_length; w++)
+                    {
+                        // Read the next weight.
+                        weights[w] = (float)reader.ReadDecimal();
+                    }
+
+                    // Create the neuron.
+                    network[l][n] = new Neuron(bias, weights, network[l - 1]);
+                }
+            }
+
+            // Close the stream.
+            reader.Close();
+        }
+
+        /// <summary>
         /// Creates a clone of this network.
         /// </summary>
         /// <returns>A clone of this network.</returns>
