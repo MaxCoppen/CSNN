@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Linq;
 
 namespace CSNN
@@ -21,6 +22,15 @@ namespace CSNN
         // the previous layer.
         public Neuron[] input;
 
+        public Neuron() { }
+
+        public Neuron(float bias, float[] weights, Neuron[] input)
+        {
+            this.bias = bias;
+            this.weights = weights;
+            this.input = input;
+        }
+
         /// <summary>
         /// Calculates the activation of this neuron and assigns it.
         /// </summary>
@@ -32,7 +42,7 @@ namespace CSNN
             for (int k = 0; k < input.Length; k++)
             {
                 // Weight from input neuron to (this).
-                float weight = weights[k]; 
+                float weight = weights[k];
                 // Activation of the input neuron.
                 float input_activation = input[k].activation;
                 // Answer to add to the summation.
@@ -58,7 +68,7 @@ namespace CSNN
         {
             if (x < -45.0f) return -1.0f;
             else if (x > 45.0f) return 1.0f;
-            else return MathF.Tanh(x);
+            else return (float)Math.Tanh(x);
         }
     }
 
@@ -66,11 +76,11 @@ namespace CSNN
     {
         public Neuron[][] network;
 
-        private Random random = new Random();
+        private Random random;
 
         // Contructors:
-        public NeuralNetwork() {}
-        public NeuralNetwork(int[] layers) => Setup(layers);
+        public NeuralNetwork(Random random) => this.random = random;
+        public NeuralNetwork(Random random, int[] layers) { this.random = random; Setup(layers); }
 
         /// <summary>
         /// Setup the network with n layers and n neurons.
@@ -221,7 +231,7 @@ namespace CSNN
             if (network == null)
                 return null;
 
-            return network[^1].Select(n => n.activation).ToArray();
+            return network[network.Length - 1].Select(n => n.activation).ToArray();
         }
 
         /// <summary>
@@ -252,11 +262,34 @@ namespace CSNN
         }
 
         /// <summary>
+        /// Copy the given neural network.
+        /// </summary>
+        public void Copy(NeuralNetwork nn)
+        {
+            for (int l = 1; l < network.Length; l++)
+            {
+                for (int n = 0; n < network[l].Length; n++)
+                {
+                    network[l][n].bias = nn.network[l][n].bias;
+
+                    for (int w = 0; w < network[l][n].weights.Length; w++)
+                    {
+                        network[l][n].weights[w] = nn.network[l][n].weights[w];
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Save this neural network to bin/saves/{name}.
         /// </summary>
         /// <param name="name">{name}</param>
         public void SaveToFile(string name)
         {
+            // Make directory if doesn't exist.
+            if (Directory.Exists(Directory.GetCurrentDirectory() + "/saves/") == false)
+                Directory.CreateDirectory(Directory.GetCurrentDirectory() + "/saves/");
+
             // Create a writer instance.
             BinaryWriter writer = new BinaryWriter(new FileStream("saves/" + name, FileMode.Create));
 
@@ -362,7 +395,7 @@ namespace CSNN
         /// <returns>A clone of this network.</returns>
         public NeuralNetwork Clone()
         {
-            NeuralNetwork clone = new NeuralNetwork();
+            NeuralNetwork clone = new NeuralNetwork(random);
 
             clone.network = (Neuron[][])network.Clone();
 
